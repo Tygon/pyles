@@ -1,14 +1,14 @@
-import abc
 import copy
 import sys
 
+from .equation import Equation, AndEq, OrEq, NotEq, ImpliesEq, BiImpliesEq, SymbolEq
+from .identities import FUNC_LIST
+
 sys.setrecursionlimit(100000000)
 
-MAX_DEPTH = 22
-MAX_TESTS = 1000000
+DEFAULT_MAX_DEPTH = 22
+DEFAULT_MAX_TESTS = 1000000
 
-# Skip 0 and 1 because they are the hashes for True and False
-HASH_VALUES = {'AndEq':2, 'OrEq':3, 'NotEq':4, 'ImpliesEq':5, 'BiImpliesEq':6, 'SymbolEq':7, 'Open':8, 'Close':9}
 
 class EquationHistory():
     def __init__(self, eq, description, parent):
@@ -27,370 +27,6 @@ class EquationHistory():
             text += str(self.parent)
         return text + str(self.eq) + ' by ' + self.description + '\n'
 
-class Equation():
-    def __init__(self):
-        self._arg_list = []
-        self.string = ""
-        self.hash = 0
-
-    @property
-    def arg1(self):
-        return self._arg_list[0]
-
-    @arg1.setter
-    def arg1(self, value):
-        if len(self._arg_list) < 1:
-            self._arg_list.append(value)
-        else:
-            self._arg_list[0] = value
-
-    @property
-    def arg2(self):
-        return self._arg_list[1]
-
-    @arg2.setter
-    def arg2(self, value):
-        if len(self._arg_list) < 2:
-            self._arg_list.append(value)
-        else:
-            self._arg_list[1] = value
-
-    @abc.abstractmethod
-    def eval(self):
-        raise NotImplementedError
-
-    @abc.abstractmethod
-    def sub_str(self):
-        raise NotImplementedError
-    
-    def set_symbol_value(self, symbol, value):
-        for x in self._arg_list:
-            if isinstance(x, SymbolEq):
-                if x.symbol == symbol:
-                    x.value = value
-                    return True
-            elif x.set_symbol_value(symbol, value):
-                return True
-
-    def get_symbol_set(self):
-        symbol_set = set()
-        for x in self._arg_list:
-            if isinstance(x, SymbolEq):
-                symbol_set.add(x)
-            else:
-                symbol_set |= x.get_symbol_set()
-        
-        return symbol_set
-
-    def __eq__(self, other):
-        if isinstance(self, type(other)):
-            if isinstance(self, SymbolEq):
-                return self.symbol == other.symbol
-            else:
-                return self._arg_list == other._arg_list
-        else:
-            return False
-
-
-class AndEq(Equation):
-    def __init__(self, arg1, arg2):
-        super().__init__()
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def eval(self):
-        return self.arg1.eval() and self.arg2.eval()
-
-    def __repr__(self):
-        return '(' + repr(self.arg1) + ' and ' + repr(self.arg2) + ')'
-
-    def sub_str(self):
-        return '(' + self.arg1.sub_str() + ' and ' + self.arg2.sub_str() + ')'
-
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['Open']) + str(hash(self.arg1)) + str(HASH_VALUES['AndEq']) + str(hash(self.arg2)) + str(HASH_VALUES['Close']))
-
-class OrEq(Equation):
-    def __init__(self, arg1, arg2):
-        super().__init__()
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def eval(self):
-        return self.arg1.eval() or self.arg2.eval()
-
-    def __repr__(self):
-        return '(' + repr(self.arg1) + ' or ' + repr(self.arg2) + ')'
-
-    def sub_str(self):
-        return '(' + self.arg1.sub_str() + ' or ' + self.arg2.sub_str() + ')'
-
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['Open']) + str(hash(self.arg1)) + str(HASH_VALUES['OrEq']) + str(hash(self.arg2)) + str(HASH_VALUES['Close']))
-
-class ImpliesEq(Equation):
-    def __init__(self, arg1, arg2):
-        super().__init__()
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def eval(self):
-        if self.arg1.eval() and not self.arg2.eval():
-            return False
-        else:
-            return True
-
-    def __repr__(self):
-        return '(' + repr(self.arg1) + ' -> ' + repr(self.arg2) + ')'
-
-    def sub_str(self):
-        return '(' + self.arg1.sub_str() + ' -> ' + self.arg2.sub_str() + ')'
-    
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['Open']) + str(hash(self.arg1)) + str(HASH_VALUES['ImpliesEq']) + str(hash(self.arg2)) + str(HASH_VALUES['Close']))
-
-class BiImpliesEq(Equation):
-    def __init__(self, arg1, arg2):
-        super().__init__()
-        self.arg1 = arg1
-        self.arg2 = arg2
-
-    def eval(self):
-        if self.arg1.eval() == self.arg2.eval():
-            return True
-        else:
-            return False
-
-    def __repr__(self):
-        return '(' + repr(self.arg1) + ' <-> ' + repr(self.arg2) + ')'
-
-    def sub_str(self):
-        return '(' + self.arg1.sub_str() + ' <-> ' + self.arg2.sub_str() + ')'
-
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['Open']) + str(hash(self.arg1)) + str(HASH_VALUES['BiImpliesEq']) + str(hash(self.arg2)) + str(HASH_VALUES['Close']))
-
-class NotEq(Equation):
-    def __init__(self, arg):
-        super().__init__()
-        self.arg1 = arg
-
-    def eval(self):
-        return not self.arg1.eval()
-
-    def __repr__(self):
-        return '(not ' + repr(self.arg1) + ')'
-
-    def sub_str(self):
-        return '(not ' + self.arg1.sub_str() + ')'
-    
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['Open']) + str(HASH_VALUES['NotEq'])  + str(hash(self.arg1)) + str(HASH_VALUES['Close']))
-
-
-class SymbolEq(Equation):
-    def __init__(self, symbol, value=False):
-        super().__init__()
-        self.symbol = symbol
-        self.value = value
-
-    def eval(self):
-        return self.value
-
-    def __repr__(self):
-        return self.symbol
-
-    def sub_str(self):
-        return str(self.value)
-
-    def __hash__(self):
-        return hash(str(self))
-        return int(str(HASH_VALUES['SymbolEq']) + str(ord(self.symbol)))
-
-def identity(eq):
-    """
-    P and True = P
-    Q or False = Q
-    """
-    if isinstance(eq, AndEq):
-        if isinstance(eq.arg2, bool):
-            if eq.arg2 == True:
-                return eq.arg1
-    elif isinstance(eq, OrEq):
-        if isinstance(eq.arg2, bool):
-            if eq.arg2 == False:
-                return eq.arg1
-
-def idempotent(eq):
-    """
-    P and P = P
-    Q or Q = Q
-    """
-    if isinstance(eq, AndEq) or isinstance(eq, OrEq):
-        if eq.arg1 == eq.arg2:
-            return eq.arg1
-
-def domination(eq):
-    """
-    P or True = True
-    Q and False = False
-    """
-    if isinstance(eq, AndEq):
-        if isinstance(eq.arg2, bool):
-            if eq.arg2 == False:
-                return False
-    elif isinstance(eq, OrEq):
-        if isinstance(eq.arg2, bool):
-            if eq.arg2 == True:
-                return True
-
-def commutative(eq):
-    """
-    P and Q = Q and P
-    P or Q = Q or P
-    """
-    if isinstance(eq, AndEq):
-        return AndEq(eq.arg2, eq.arg1)
-    elif isinstance(eq, OrEq):
-        return OrEq(eq.arg2, eq.arg1)
-
-def associative(eq):
-    """
-    (P and Q) and R = P and (Q and R)
-    (P or Q) or R = P or (Q or R)
-    """
-    if isinstance(eq, AndEq) or isinstance(eq, OrEq):
-        if isinstance(eq.arg1, type(eq)):
-            arg1 = eq.arg1.arg1
-            arg2 = type(eq)(eq.arg1.arg2, eq.arg2)
-
-            return type(eq)(arg1, arg2)
-
-def distributive(eq):
-    """
-    P or (Q and R) = (P or Q) and (P or R)
-    P and (Q or R) = (P and Q) or (P and R)
-    """
-    if isinstance(eq, OrEq):
-        if isinstance(eq.arg2, AndEq):
-            arg1 = OrEq(eq.arg1, eq.arg2.arg1)
-            arg2 = OrEq(eq.arg1, eq.arg2.arg2)
-
-            return AndEq(arg1, arg2)
-        elif isinstance(eq.arg1, AndEq) and isinstance(eq.arg2, AndEq) and eq.arg1.arg1 == eq.arg2.arg1:
-            arg1 = eq.arg1.arg1
-            arg2 = OrEq(eq.arg1.arg2, eq.arg2.arg2)
-
-            return OrEq(arg1, arg2)
-    elif isinstance(eq, AndEq):
-        if isinstance(eq.arg2, OrEq):
-            arg1 = AndEq(eq.arg1, eq.arg2.arg1)
-            arg2 = AndEq(eq.arg1, eq.arg2.arg2)
-
-            return OrEq(arg1, arg2)
-        elif isinstance(eq.arg1, OrEq) and isinstance(eq.arg2, OrEq) and eq.arg1.arg1 == eq.arg2.arg1:
-            arg1 = eq.arg1.arg1
-            arg2 = OrEq(eq.arg1.arg2, eq.arg2.arg2)
-
-            return OrEq(arg1, arg2)
-
-def negation(eq):
-    """
-    P and not P = F
-    P or not P = T
-    """
-    if isinstance(eq, AndEq) and isinstance(eq.arg2, NotEq):
-        if eq.arg1 == eq.arg2.arg1:
-            return False
-    elif isinstance(eq, OrEq) and isinstance(eq.arg2, NotEq):
-        if eq.arg1 == eq.arg2.arg1:
-            return True
-
-def absorption(eq):
-    """
-    P and (P or Q) = P
-    P or (P and Q) = P
-    """
-    if isinstance(eq, AndEq) or isinstance(eq, OrEq):
-        if isinstance(eq.arg2, AndEq) or isinstance(eq.arg2, OrEq):
-            if not isinstance(eq, type(eq.arg2)):
-                if eq.arg1 == eq.arg2.arg1:
-                    return eq.arg1
-
-def double_negation(eq):
-    """
-    not not P = P
-    P = not not P
-    """
-    if isinstance(eq, NotEq) and isinstance(eq.arg1, NotEq):
-        return eq.arg1.arg1
-    # else:
-    #     return NotEq(NotEq(eq))
-
-def implication_equivalence(eq):
-    """
-    P -> Q = not P or Q
-    """
-    if isinstance(eq, ImpliesEq):
-        arg1 = NotEq(eq.arg1)
-        arg2 = eq.arg2
-
-        return OrEq(arg1, arg2)
-    elif isinstance(eq, OrEq) and isinstance(eq.arg1, NotEq):
-        arg1 = eq.arg1.arg1
-        arg2 = eq.arg2
-        
-        return ImpliesEq(arg1, arg2)
-
-def biconditional_equivalence(eq):
-    """
-    P <-> Q = (P -> Q) and (Q -> P)
-    """
-    if isinstance(eq, BiImpliesEq):
-        arg1 = ImpliesEq(eq.arg1, eq.arg2)
-        arg2 = ImpliesEq(eq.arg2, eq.arg1)
-
-        return AndEq(arg1, arg2)
-    elif isinstance(eq, AndEq) and isinstance(eq.arg1, ImpliesEq) and isinstance(eq.arg2, ImpliesEq):
-        if eq.arg1.arg1 == eq.arg2.arg2 and eq.arg1.arg2 == eq.arg2.arg1:
-            arg1 = eq.arg1.arg1
-            arg2 = eq.arg1.arg2
-            
-            return BiImpliesEq(arg1, arg2)
-
-def demorgans_law(eq):
-    """
-    not (P and Q) = not P or not Q
-    not (P or Q) = not P and not Q
-    """
-    if isinstance(eq, NotEq):
-        if isinstance(eq.arg1, AndEq) or isinstance(eq.arg1, OrEq):
-            arg1 = NotEq(eq.arg1.arg1)
-            arg2 = NotEq(eq.arg1.arg2)
-
-            if isinstance(eq.arg1, AndEq):
-                return OrEq(arg1, arg2)
-            else:
-                return AndEq(arg1, arg2)
-
-    elif isinstance(eq, AndEq) or isinstance(eq, OrEq):
-        if isinstance(eq.arg1, NotEq) and isinstance(eq.arg2, NotEq):
-            arg1 = eq.arg1.arg1
-            arg2 = eq.arg2.arg1
-            
-            if isinstance(eq, AndEq):
-                return NotEq(OrEq(arg1, arg2))
-            else:
-                return NotEq(AndEq(arg1, arg2))
-
-
-FUNC_LIST = [identity, idempotent, domination, commutative, associative, distributive, negation, absorption, double_negation, demorgans_law] #, implication_equivalence, biconditional_equivalence]
-
 def get_depth(eq):
     if isinstance(eq, SymbolEq):
         return 1
@@ -404,7 +40,6 @@ def get_depth(eq):
     return sum + 1
 
 def copy_eq(eq):
-    # return copy.deepcopy(eq)
     if isinstance(eq, NotEq):
         return NotEq(copy_eq(eq.arg1))
     elif isinstance(eq, AndEq):
@@ -421,7 +56,7 @@ def copy_eq(eq):
         return eq
 
 
-def get_variations(func, eq):
+def get_variations(func, eq, max_depth=DEFAULT_MAX_DEPTH):
     """
     Gets all the variations of an equation when a function is applied.
     Function is applied to main eq and all of its arguments.
@@ -436,7 +71,7 @@ def get_variations(func, eq):
     if not isinstance(eq, SymbolEq) and isinstance(eq, Equation):
         # Apply to main eq
         new_eq = func(eq)
-        if new_eq and get_depth(new_eq) <= MAX_DEPTH:
+        if new_eq and get_depth(new_eq) <= max_depth:
             variation_list.append(new_eq)
         
         # Apply to all arguments
@@ -450,17 +85,23 @@ def get_variations(func, eq):
                         new_eq = copy_eq(eq)
                         new_eq._arg_list[i] = var
 
-                        if get_depth(new_eq) <= MAX_DEPTH:
+                        if get_depth(new_eq) <= max_depth:
                             variation_list.append(new_eq)
                             
     return variation_list
 
-def prove(eq1, eq2, simplify=False):
-    # tested_list = [hash(eq1)]
-    tested_list_str = {str(eq1)}
+def prove(eq1, dest_eq, simplify=False, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
+    """
+    Attempts to prove that eq1=eq2 through logical equivalences.
+    Performs a breadth-first search.
 
-    # eq2_hash = hash(eq2)
-    eq2_str = str(eq2)
+    :param eq1: Equation that will be modified.
+    :param dest_eq: Destination equation.
+    :param simplify: If true, function will not stop until MAX_TESTS reached or all variations have been checked.
+    :returns: An equation history obj. The matching equation if found, otherwise the top equation.
+    """
+    tested_set = {str(eq1)}
+    dest_eq_str = str(dest_eq)
     
     top_node = EquationHistory(eq1, 'start', None)
     search_list = [top_node]
@@ -468,47 +109,54 @@ def prove(eq1, eq2, simplify=False):
     curr_history = top_node
 
     while True:
+        # Apply every function to current eq
         for func in FUNC_LIST:
-            variation_list = get_variations(func, curr_history.eq)
+            variation_list = get_variations(func, curr_history.eq, max_depth)
+
             for var in variation_list:
-                # var_hash = hash(var)
                 var_str = str(var)
 
-                if var == True:
-                    print('true')
-
-                if var_str == eq2_str or (simplify and (isinstance(var, bool) or isinstance(var, SymbolEq))):
+                # If variation matches destination eq, or we are simplifying and the eq is as small as possible
+                if var_str == dest_eq_str or (simplify and (isinstance(var, bool) or isinstance(var, SymbolEq))):
                     print('finished', len(search_list))
                     return EquationHistory(var, str(func), curr_history)
-                elif var_str not in tested_list_str:
-                    # for i, x in enumerate(tested_list):
-                    #     if var_hash == x:
-                    #         print(var_str, 'same hash as', tested_list_str[i])
 
-                    # tested_list.append(var_hash)
-                    tested_list_str.add(var_str)
+                # Else if the variation is not in the tested set
+                elif var_str not in tested_set:
+                    tested_set.add(var_str)
 
                     new_hist = EquationHistory(var, str(func), curr_history)
                     search_list.append(new_hist)
 
-                    if simplify and len(tested_list_str) > MAX_TESTS:
+                    # If trying to simplify and max_tests exceeded, abort
+                    if simplify and len(tested_set) > max_tests:
                         print('max tests')
                         return top_node
 
-                    if len(tested_list_str) % 100000 == 0:
-                        print(len(tested_list_str))
+                    if len(tested_set) % 100000 == 0:
+                        print(len(tested_set))
 
+        # Remove first node since all variations are catalogued
+        # And attempt to select the next node, otherwise return
         del search_list[0]
         if len(search_list) > 0:
             curr_history = search_list[0]
         else:
             if simplify:
-                print('list empty', len(tested_list_str))
+                print('list empty', len(tested_set))
                 return top_node
             else:
                 raise Exception("Proof failed.")
 
 def parse_text(text):
+    """
+    Parse the string into a list of lists.
+
+    Ex. "S and (P or R)" -> ['S', 'and' ['P', 'or' 'R']]
+
+    :param text: Text to parse.
+    :returns: List of items, with subitems as sublitsts.
+    """
     parse_list = []
     open_count = 0
     sub = ''
@@ -540,6 +188,14 @@ def parse_text(text):
     return parse_list
 
 def parse_equation(parse_list, symbol_list=[]):
+    """
+    Parse equation list into an Equation object.
+    Reuses equivalent symbols so all similar symbols are the same reference.
+
+    :param parse_list: Parse list returned from parse_text.
+    :param symbol_list: List of SymbolEq objects that have already been created.
+    :returns: A single Equation obj, with appropriate Equations as arguments.
+    """
     if len(parse_list) == 0:
         return parse_list[0]
 
@@ -550,6 +206,7 @@ def parse_equation(parse_list, symbol_list=[]):
     if len(parse_list) == 0:
         return parse_list[0]
 
+    # Convert all symbol and boolean tokens first.
     for i, x in enumerate(parse_list):
         if x == 'True':
             parse_list[i] = True
@@ -562,13 +219,18 @@ def parse_equation(parse_list, symbol_list=[]):
                 parse_list[i] = SymbolEq(x)
                 symbol_list.append(parse_list[i])
     
+    # Convert the rest in order of precedence.
+
+    # While there is a token in the parse_list.
     while 'not' in parse_list:
         for i, x in enumerate(parse_list):
             if x == 'not':
+                # Replace the token with the Equation obj, and the arguments consumed with None.
                 parse_list[i] = NotEq(parse_list[i + 1])
                 parse_list[i + 1] = None
                 break
-            
+        
+        # Filter the parse_list so to remove any consumed tokens.
         parse_list = list(filter(None, parse_list))
 
     if len(parse_list) == 0:
@@ -620,16 +282,24 @@ def parse_equation(parse_list, symbol_list=[]):
     return parse_list[0]
 
 def get_top_history(eq_history):
+    """ Return the 'start' equation from any given EquationHistory. """
     top_history = eq_history
     while eq_history.parent:
         top_history = top_history.parent
     
     return top_history
 
-def get_lowest_depth(eq_history, lowest_depth):
+def get_lowest_depth(eq_history):
+    """
+    Find the child equation of a EquationHistory that is the smallest.
+
+    :param eq_history: Parent EquationHistory.
+    :returns: Equation history with the lowest depth Equation.
+    """
+
     lowest_per_child = []
     for child in eq_history.children:
-        lowest_per_child.append(get_lowest_depth(child, lowest_depth))
+        lowest_per_child.append(get_lowest_depth(child))
 
     lowest = eq_history
     for child in lowest_per_child:
@@ -637,14 +307,15 @@ def get_lowest_depth(eq_history, lowest_depth):
             lowest = child
     return lowest
 
-def simplify(eq):
-    proof = prove(eq, None, True)
-    return get_lowest_depth(proof, None)
+def simplify(eq, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
+    proof = prove(eq, None, True, max_depth=max_depth, max_tests=max_tests)
+    return get_lowest_depth(proof)
 
 def get_equation(text):
     return parse_equation(parse_text(text))
 
 def main():
+    print(parse_text("S and (P or R)"))
     # eq = get_equation("not (((X or ((not x) and not (Z or Y))) and (not Z)) or (Y and (Z and (not X))))")
     # variation_list = get_variations(commutative, eq)
     # print(variation_list)
@@ -675,10 +346,10 @@ def main():
     # eq1 = get_equation("(not (((X or ((not X) and (not (Z or Y)))) and (not Z)) or (Y and (Z and (not X)))))")
     # eq2 = get_equation("(((Z and X) or ((Y and X) and Z)) or (((Y or Z) and (not (Z and Y))) and (not X)))")
 
-    eq1 = get_equation("((not ((Z and (not X)) and Y)) and (((not X) and Y) or Z))")
-    eq2 = get_equation("(((not (X or (Y and Z))) and (Z or Y)) or (X and Z))")
+    # eq1 = get_equation("((not ((Z and (not X)) and Y)) and (((not X) and Y) or Z))")
+    # eq2 = get_equation("(((not (X or (Y and Z))) and (Z or Y)) or (X and Z))")
 
-    print(prove(eq1, eq2))
+    # print(prove(eq1, eq2))
 
 if __name__ == "__main__":
     main()
