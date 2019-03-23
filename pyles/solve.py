@@ -314,43 +314,4 @@ def simplify(eq, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
 def get_equation(text):
     return parse_equation(parse_text(text))
 
-def main():
-    print(parse_text("S and (P or R)"))
-    # eq = get_equation("not (((X or ((not x) and not (Z or Y))) and (not Z)) or (Y and (Z and (not X))))")
-    # variation_list = get_variations(commutative, eq)
-    # print(variation_list)
-
-    # print(hash(get_equation("(((a or (b -> c)) or (b or (not a))) and ((c or (not a)) or (a or ((not b) or c))))")))
-
-    # eq1 = get_equation("not (((X or ((not x) and not (Z or Y))) and (not Z)) or (Y and (Z and (not X))))")
-    # print(type(eq1))
-    # eq2 = get_equation("((Z and X) or ((Y and X) and Z)) or (((Y or Z) and not (Z and Y)) and not X)")
-
-    # print(hash(eq1), hash(eq2))
-    # print(hash(eq1) == hash(eq2))
-
-    # proof = prove(eq1, eq2)
-    # print('proof')
-    # print(proof)
-
-    # eq1 = parse_equation(parse_text("s <-> ((w -> a) and (not a))"))
-
-    # proof = prove(eq1, True)
-
-    # print('proof')
-    # print(proof)
-
-    # print('simplify')
-    # print(simplify(eq2))
-
-    # eq1 = get_equation("(not (((X or ((not X) and (not (Z or Y)))) and (not Z)) or (Y and (Z and (not X)))))")
-    # eq2 = get_equation("(((Z and X) or ((Y and X) and Z)) or (((Y or Z) and (not (Z and Y))) and (not X)))")
-
-    # eq1 = get_equation("((not ((Z and (not X)) and Y)) and (((not X) and Y) or Z))")
-    # eq2 = get_equation("(((not (X or (Y and Z))) and (Z or Y)) or (X and Z))")
-
-    # print(prove(eq1, eq2))
-
-if __name__ == "__main__":
-    main()
     
