@@ -1,7 +1,7 @@
 import unittest
 
 from pyles.identities import *
-from pyles.main import get_equation
+from pyles.solve import get_equation
 
 class TestLogic(unittest.TestCase):
     def test_identity(self):

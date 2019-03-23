@@ -1,6 +1,6 @@
 import unittest
 
-from pyles.main import *
+from pyles.solve import *
 from pyles.equation import *
 from pyles.identities import *
 

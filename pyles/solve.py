@@ -3,6 +3,7 @@ import sys
 
 from .equation import Equation, AndEq, OrEq, NotEq, ImpliesEq, BiImpliesEq, SymbolEq
 from .identities import FUNC_LIST
+from .database import SetDatabase
 
 sys.setrecursionlimit(100000000)
 
@@ -90,17 +91,20 @@ def get_variations(func, eq, max_depth=DEFAULT_MAX_DEPTH):
                             
     return variation_list
 
-def prove(eq1, dest_eq, simplify=False, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
+def prove(eq1, dest_eq, database=SetDatabase(), simplify=False, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
     """
     Attempts to prove that eq1=eq2 through logical equivalences.
     Performs a breadth-first search.
 
     :param eq1: Equation that will be modified.
     :param dest_eq: Destination equation.
+    :param database: Database to keep track of tested equations.
     :param simplify: If true, function will not stop until MAX_TESTS reached or all variations have been checked.
+    :param max_depth: Max depth of variations to check.
+    :param max_tests: Max amount to equations to test. ONLY works when simplify=True.
+
     :returns: An equation history obj. The matching equation if found, otherwise the top equation.
     """
-    tested_set = {str(eq1)}
     dest_eq_str = str(dest_eq)
     
     top_node = EquationHistory(eq1, 'start', None)
@@ -122,19 +126,20 @@ def prove(eq1, dest_eq, simplify=False, max_depth=DEFAULT_MAX_DEPTH, max_tests=D
                     return EquationHistory(var, str(func), curr_history)
 
                 # Else if the variation is not in the tested set
-                elif var_str not in tested_set:
-                    tested_set.add(var_str)
+                elif not database.eq_exists(var_str):
+                    database.add_eq(var_str)
 
                     new_hist = EquationHistory(var, str(func), curr_history)
                     search_list.append(new_hist)
 
                     # If trying to simplify and max_tests exceeded, abort
-                    if simplify and len(tested_set) > max_tests:
+                    test_count = database.get_test_count()
+                    if simplify and test_count > max_tests:
                         print('max tests')
                         return top_node
 
-                    if len(tested_set) % 100000 == 0:
-                        print(len(tested_set))
+                    if test_count % 100000 == 0:
+                        print(test_count)
 
         # Remove first node since all variations are catalogued
         # And attempt to select the next node, otherwise return
@@ -308,10 +313,8 @@ def get_lowest_depth(eq_history):
     return lowest
 
 def simplify(eq, max_depth=DEFAULT_MAX_DEPTH, max_tests=DEFAULT_MAX_TESTS):
-    proof = prove(eq, None, True, max_depth=max_depth, max_tests=max_tests)
+    proof = prove(eq, None, simplify=True, max_depth=max_depth, max_tests=max_tests)
     return get_lowest_depth(proof)
 
 def get_equation(text):
     return parse_equation(parse_text(text))
-
-    
